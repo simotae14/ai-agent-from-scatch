@@ -16,36 +16,41 @@ export const runAgent = async ({
 
   // show a loader
   const loader = showLoader('🤔 Thinking...')
-  // get the history of messages
-  const history = await getMessages()
 
-  // call the llm function
-  const response = await runLLM({
-    messages: history,
-    tools,
-  })
-  // then we need to add the response we received from the LLM to the db
-  await addMessages([response])
+  // start the AI agent loop
+  while (true) {
+    // get the history of messages
+    const history = await getMessages()
 
-  // handle the case response has tool_calls
-  if (response.tool_calls) {
-    // take just the first tool call
-    const toolCall = response.tool_calls[0]
+    // call the llm function
+    const response = await runLLM({
+      messages: history,
+      tools,
+    })
+    // then we need to add the response we received from the LLM to the db
+    await addMessages([response])
 
-    loader.update(`executing: ${toolCall.function.name}`)
+    // handle the case we have a response
+    if (response.content) {
+      loader.stop()
+      logMessage(response)
+      return getMessages() // exit the loop
+    }
 
-    const toolResponse = await runTool(toolCall, userMessage)
+    // handle the case response has tool_calls
+    if (response.tool_calls) {
+      // take just the first tool call
+      const toolCall = response.tool_calls[0]
 
-    // save the tool response in the db
-    await saveToolResponse(toolCall.id, toolResponse)
+      logMessage(response)
+      loader.update(`executing: ${toolCall.function.name}`)
 
-    loader.update(`done: ${toolCall.function.name}`)
+      const toolResponse = await runTool(toolCall, userMessage)
+
+      // save the tool response in the db
+      await saveToolResponse(toolCall.id, toolResponse)
+
+      loader.update(`done: ${toolCall.function.name}`)
+    }
   }
-
-  logMessage(response)
-  // stop the loader
-  loader.stop()
-
-  // return all the messages
-  return getMessages()
 }
