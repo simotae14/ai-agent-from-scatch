@@ -1,6 +1,11 @@
-import { generateImage } from './generateImage'
-import { dadJoke } from './dadJoke'
-import { italianJoke } from './italianJoke'
-import { reddit } from './reddit'
+import { generateImageToolDefinition } from './generateImage'
+import { dadJokeToolDefinition } from './dadJoke'
+import { italianJokeToolDefinition } from './italianJoke'
+import { redditToolDefinition } from './reddit'
 
-export const tools = [generateImage, reddit, dadJoke, italianJoke]
+export const tools = [
+  generateImageToolDefinition,
+  redditToolDefinition,
+  dadJokeToolDefinition,
+  italianJokeToolDefinition,
+]
