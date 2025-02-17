@@ -1,7 +1,8 @@
-import type { AIMessage } from '../types'
 import { addMessages, getMessages } from './memory'
 import { runLLM } from './llm'
 import { logMessage, showLoader } from './ui'
+import { runTool } from './toolRunner'
+import { saveToolResponse } from './memory'
 
 export const runAgent = async ({
   userMessage,
@@ -23,15 +24,25 @@ export const runAgent = async ({
     messages: history,
     tools,
   })
-
-  // handle the case response has tool_calls
-  if (response.tool_calls) {
-    console.log(response.tool_calls)
-  }
-
   // then we need to add the response we received from the LLM to the db
   await addMessages([response])
 
+  // handle the case response has tool_calls
+  if (response.tool_calls) {
+    // take just the first tool call
+    const toolCall = response.tool_calls[0]
+
+    loader.update(`executing: ${toolCall.function.name}`)
+
+    const toolResponse = await runTool(toolCall, userMessage)
+
+    // save the tool response in the db
+    await saveToolResponse(toolCall.id, toolResponse)
+
+    loader.update(`done: ${toolCall.function.name}`)
+  }
+
+  logMessage(response)
   // stop the loader
   loader.stop()
 
